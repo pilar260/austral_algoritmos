@@ -68,8 +68,6 @@ mobility$transportation_type   <- as.factor(mobility$transportation_type)
 Creamos un nuevo set de datos en el cual pasamos el set inicial del formato ancho al formato largo ( todas las columnas de fecha ) y finalmente, se crean las columnas nuevas "fecha" y "tasa" donde se almacenan los datos originales de las columnas de fecha. 
 
 ```{r}
-
-library(tidyr)
 datos_v   <- mobility %>% gather(fecha, tasa    , 7:ncol(mobility))
 ```
 
@@ -108,7 +106,6 @@ Importamos el excel extraido de :
 Es importante verificar que la ruta sea correcta al correr el script.
 
 ```{r}
-library(readr)
 casos_covid19_CDN <- read_csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/salud/casos-covid-19/casos_covid19.csv")
 ```
 
@@ -162,9 +159,6 @@ En orden de izquierda a derecha las lineas punteadas marcan las fechas de inicio
 
 ```{r}
 
-library(ggplot2)
-library(plotly)
-
 p <-  ggplotly(
 
     ggplot( show.legend = TRUE) +
@@ -212,7 +206,6 @@ Luego, agregamos a la tabla principal "Comp_mov_fallecidos_Prom_Movil" el últim
 
 ```{r}
 library(zoo) 
-library(dplyr)
 
 Comp_mov_fallecidos_Prom_Movil <- Comp_mov_fallecidos
 
@@ -235,8 +228,7 @@ Como último paso, graficamos los promedios móviles de Tasa de movilidad y fall
 Marcamos, a su vez, los máximos relativos de movilidad(línea punteada negra) y los máximos relativos de fallecimientos (línea punteada azul).
 
 ```{r}
-library(ggplot2)
-library(plotly)
+
 
 u <-  ggplotly(
 
