@@ -2,7 +2,8 @@
 title: "MCD - Comisión A - Algoritmos y Estructura de Datos - TP N°1"
 author: "Arias María del Pilar, Beldorati Germán, Bondarchuck María, Brankevich Paula, Jara María, Mancino Melina, May Germán, Pereyra Zorraquín Nicolás, Varise Florencia "
 date: "04-21"
-
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## COVID-19: Evolución del número de fallecimientos y la movilidad en Ciudad Autónoma de Buenos Aires  Marzo 2020/ Abril 2021
@@ -38,9 +39,9 @@ check_packages <- function(packages) {
     )
   }
 }
-packages_needed <- c("tidyverse","ggplot2", "ggrepel", "plotly",
+packages_needed <- c("tidyverse", "ggrepel", "plotly",
                      "lubridate", "htmlwidgets" , "RColorBrewer",
-                     "sqldf", "grid", "data.table", "readr", "easypackages" )
+                     "sqldf", "grid", "data.table", "easypackages")
 check_packages(packages_needed)
 ```
 
@@ -56,12 +57,12 @@ libraries(packages_needed)
 
 Importamos la URL de Movilidad de Apple donde posteriormente se filtrará la tasa de movilidad de CABA de los caminantes.
 
-Recordar, revisar si la ruta y la fecha en el nombre de archivo requieren actualización.
-```{r}
-mobility_url <- "https://covid19-static.cdn-apple.com/covid19-mobility-data/2107HotfixDev9/v3/en-us/"
+Como la URL de Apple se modifica dia a dia, usamos un mirror para descargar los datos.
 
-aux <-  paste(mobility_url, "applemobilitytrends-2021-05-04.csv", sep = "")
-mobility   <- read.csv(aux, sep = ",", header = T)
+```{r}
+mobility_url <- "https://github.com/ActiveConclusion/COVID19_mobility/raw/master/apple_reports/applemobilitytrends.csv"
+
+mobility <- read_csv(mobility_url)
 ```
 
 ### Manipulación de Datos
