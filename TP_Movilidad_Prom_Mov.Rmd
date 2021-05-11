@@ -1,0 +1,297 @@
+---
+title: "MCD - Comisión A - Algoritmos y Estructura de Datos - TP N°1"
+author: "Arias María del Pilar, Beldorati Germán, Bondarchuck María, Brankevich Paula, Jara María, Mancino Melina, May Germán, Pereyra Zorraquín Nicolás, Varise Florencia "
+date: "04-21"
+
+---
+
+## COVID-19: Evolución del número de fallecimientos y la movilidad en Ciudad Autónoma de Buenos Aires  Marzo 2020/ Abril 2021
+
+El primer caso de COVID-19 en Argentina se detectó el 3 de marzo de 2020 y el 7 de marzo, el Ministerio de Salud confirmó la primera muerte causada por dicho virus. Pocos dias después, el 10 de marzo, la Organización Mundial de la Salud (OMS) declara COVID-19 como pandemia. 
+
+A raíz de esto, se establecieron medidas de restricción de la movilidad (ASPO) para control de la diseminación del virus. 
+
+El objetivo de este análisis es evaluar gráficamente las tendencias de la movilidad de las personas en la Ciudad Autónoma de Buenos Aires, como consecuencia de las políticas que se han establecido, en simultáneo con el número de muertes por COVID-19.
+
+Métodos:
+  
+Utilizamos RStudio para realizar un análisis exploratorio de datos y las manipulaciones que consideramos necesarias para obtener una visualización de los mismos.
+
+```{r }
+knitr::opts_chunk$set(echo = TRUE,warning=F,message=F)
+```
+
+### Importar Paquetes.
+Para comenzar, verificamos que estén instalados los paquetes necesarios.
+
+Los nuevos paquetes deberán ser agregados al vector "packages_needed".
+
+```{r}
+check_packages <- function(packages) {
+  if (all(packages %in% rownames(installed.packages()))) {
+    TRUE
+  } else{
+    cat(
+      "Instalar los siguientes packages antes de ejecutar el presente script\n",
+      packages[!(packages %in% rownames(installed.packages()))],
+      "\n"
+    )
+  }
+}
+packages_needed <- c("tidyverse","ggplot2", "ggrepel", "plotly",
+                     "lubridate", "htmlwidgets" , "RColorBrewer",
+                     "sqldf", "grid", "data.table", "readr", "easypackages" )
+check_packages(packages_needed)
+```
+
+### Activar Paquetes.
+Primero instalamos la librería "easypackes" para instalar todo el resto.
+Cargamos las  librerías de los paquetes ya instalados llamandolas mediante la función library().
+
+
+```{r }
+library(easypackages)
+libraries(packages_needed)
+```
+
+Importamos la URL de Movilidad de Apple donde posteriormente se filtrará la tasa de movilidad de CABA de los caminantes.
+
+Recordar, revisar si la ruta y la fecha en el nombre de archivo requieren actualización.
+```{r}
+mobility_url <- "https://covid19-static.cdn-apple.com/covid19-mobility-data/2107HotfixDev9/v3/en-us/"
+
+aux <-  paste(mobility_url, "applemobilitytrends-2021-05-04.csv", sep = "")
+mobility   <- read.csv(aux, sep = ",", header = T)
+```
+
+### Manipulación de Datos
+
+Convertimos las columnas region y transportation_type al formato factor.
+
+```{r}
+mobility$region                <- as.factor(mobility$region)
+mobility$transportation_type   <- as.factor(mobility$transportation_type)
+```
+
+Creamos un nuevo set de datos en el cual pasamos el set inicial del formato ancho al formato largo ( todas las columnas de fecha ) y finalmente, se crean las columnas nuevas "fecha" y "tasa" donde se almacenan los datos originales de las columnas de fecha. 
+
+```{r}
+
+library(tidyr)
+datos_v   <- mobility %>% gather(fecha, tasa    , 7:ncol(mobility))
+```
+
+Modificamos el formato de la fecha.
+
+```{r}
+  datos_v$fecha <- as.Date(datos_v$fecha, format = "X%Y.%m.%d")
+```
+
+Filtramos por "Buenos Aires" y tipo de movilidad "caminando".
+
+En caso de querer adaptar el código para otro tipo de movilidad o región, se deberia filtrar aquí.
+
+```{r}
+pais = "Buenos Aires"
+trans = "walking"
+datos <- subset(datos_v, region == pais & transportation_type == trans)
+
+```
+
+Seleccionamos sólo aquellas columnas que nos interesan.
+
+```{r}
+
+datos <-  select( datos, fecha, tasa)
+```
+
+### Datos de Fallecimientos
+
+Una vez terminado el data wrangling para la Movilidad, cargamos nuestros datos de fallecidos.
+Ahora se importa y se trabaja sólo con aquellos de fallecidos por COVID-19 en Buenos Aires.
+
+Importamos el excel extraido de :
+### Unión de los datos de fallecimientos y de movilidad
+
+Es importante verificar que la ruta sea correcta al correr el script.
+
+```{r}
+library(readr)
+casos_covid19_CDN <- read_csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/salud/casos-covid-19/casos_covid19.csv")
+```
+
+Filtramos solo aquellos casos casos de CABA que hayan fallecido.
+
+```{r}
+Cant_Fallecidos_Caba <- casos_covid19_CDN %>% filter(provincia=="CABA" & fallecido=="si")
+```
+
+Seleccionamos  sólo la columna de "fecha de fallecimiento".
+
+```{r}
+Cant_Fallecidos_Caba <- select(Cant_Fallecidos_Caba,"fecha_fallecimiento")
+```
+
+Convertimos en formato fecha la columna "fecha_fallecimiento".
+
+```{r}
+Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba%>% mutate(fecha_fallecimiento = as.Date(parse_date_time(fecha_fallecimiento,"d b Y H M S")))
+```
+
+Agrupamos y contamos cantidad de fallecidos por fecha, ordenando y renombrando columnas.
+
+```{r}
+Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba %>% count(fecha_fallecimiento, sort = TRUE) %>% arrange(fecha_fallecimiento)
+
+colnames(Cant_Fallecidos_Caba) <- c("fecha","Cant_Fallecidos_Caba")
+```
+
+Eliminamos las dos últimas fechas que pueden tener errores de carga
+
+```{r}
+Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba[-nrow(Cant_Fallecidos_Caba),]
+Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba[-nrow(Cant_Fallecidos_Caba),]
+```
+
+
+### Unión de los datos de fallecimientos y de movilidad
+
+Unimos las dos tablas en una sola tomando "fecha" como clave primaria (lo toma solo porque coincide el nombre de la variable en ambas tablas)
+
+```{r}
+Comp_mov_fallecidos <- merge(x= datos, y= Cant_Fallecidos_Caba)
+```
+
+### Gráfico 1: Evolución Movilidad y Fallecimientos en CABA 2020-2021
+
+Finalmente, se grafican las dos variables en función del tiempo.
+
+En orden de izquierda a derecha las lineas punteadas marcan las fechas de inicio de las medidas de aislamiento tomadas por el Gobierno: Aislamiento Social Preventivo y Obligatorio (ASPO), Distanciamiento Social Preventivo y Obligatorio(DISPO) y Decreto 241/2021.
+
+```{r}
+
+library(ggplot2)
+library(plotly)
+
+p <-  ggplotly(
+
+    ggplot( show.legend = TRUE) +
+        geom_line(data = Comp_mov_fallecidos,  aes(x = fecha, y=tasa, color = "Movilidad"),alpha=0.5 ) +
+        geom_line(data = Comp_mov_fallecidos, aes( x = fecha, y=Cant_Fallecidos_Caba, color = "Fallecidos" ),alpha=0.5) +
+        geom_smooth(data = Comp_mov_fallecidos,  aes(x = fecha, y=Cant_Fallecidos_Caba),color='darkorchid1',method = "lm",formula = y ~ splines::bs(x, 10))+
+        geom_smooth(data = Comp_mov_fallecidos,  aes(x = fecha, y=tasa),color='coral',method = "lm",formula = y ~ splines::bs(x,10)) +
+        geom_vline( xintercept = as.numeric(as.Date('2020-11-07')),linetype=2,color='grey')+
+        geom_vline( xintercept = as.numeric(as.Date('2020-03-20')),linetype=2,color='grey')+
+        geom_vline( xintercept = as.numeric(as.Date('2021-04-19')),linetype=2,color='grey')+
+        xlab('') +
+        ylab('') +
+          scale_color_manual(name="Groups",values=c("Movilidad"="orange",
+                                                    "Fallecidos"= "darkorchid1"))+
+          guides(colour = guide_legend(override.aes = list(linetype = 1)))+
+        scale_x_date(date_breaks = "30 day", date_labels =  "%b%y") +
+        scale_y_continuous(sec.axis = sec_axis(~., name = "Fallecidos")) +
+        theme_classic()+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9))
+              ) %>%
+  layout(title = list(text = paste0('COVID-19: Evolución Movilidad y Fallecimientos en CABA 2020-2021',
+                                    '<br>',
+                                    '<sup>',
+                                    ' Fuente Movilidad CABA: Apple - Fuente Fallecimientos CABA: GCBA ',
+                                    '</sup>')),titlefont=list(size=16))
+
+
+p <- p %>% layout(legend = list(x = 0.1, y = 0.9))
+p 
+
+
+
+```
+
+### Manipulación de datos para cálculo de promedios móviles
+
+Observando el gráfico de tasa de movilidad y cantidad de fallecidos, nos proponemos verificar la distancia entre los picos de ambas curvas. Para ello, realizamos otro gráfico basado en los promedios móviles de las dos variables que nos permita visualizarlos mejor.
+
+En primer lugar, creamos un nuevo DataFrame.Identificamos 3 registros de tipo NA en la variable "tasa".
+
+Para solucionarlo, para cada valor faltante imputamos esos NAs por los últimos valores consistentes. Creemos que esto es metodológicamente mejor que eliminar registros de fallecidos.
+Para lograr lo anterior, creamos un vector a partir de una función que toma el último valor consistente y lo utiliza para reemplazar los NA que encuentre y lo agregamos como una nueva columna llamada "tasa_corregida".
+
+Luego, agregamos a la tabla principal "Comp_mov_fallecidos_Prom_Movil" el último vector como una nueva variable.
+
+```{r}
+library(zoo) 
+library(dplyr)
+
+Comp_mov_fallecidos_Prom_Movil <- Comp_mov_fallecidos
+
+
+reemplaza_NAs <- na.locf(Comp_mov_fallecidos_Prom_Movil$tasa)
+
+Comp_mov_fallecidos_Prom_Movil <-  Comp_mov_fallecidos_Prom_Movil  %>% 
+  mutate(tasa_corregida = reemplaza_NAs) 
+
+
+Comp_mov_fallecidos_Prom_Movil <-  Comp_mov_fallecidos_Prom_Movil  %>% 
+  mutate(media_movil_tasa = rollmean(tasa_corregida, k = 7 , fill = NA, align = "right"),media_movil_fallecidos = rollmean(Cant_Fallecidos_Caba, k = 7 , fill = NA, align = "right"))
+```
+
+
+
+### Gráfico 2: Promedio Móvil Evolución Movilidad y Fallecimientos en CABA 2020-2021
+
+Como último paso, graficamos los promedios móviles de Tasa de movilidad y fallecidos en función del tiempo.
+Marcamos, a su vez, los máximos relativos de movilidad(línea punteada negra) y los máximos relativos de fallecimientos (línea punteada azul).
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+u <-  ggplotly(
+
+    ggplot( show.legend = TRUE) +
+        geom_line(data = Comp_mov_fallecidos_Prom_Movil,  aes(x = fecha, y=media_movil_tasa, color = "Promedio móvil Movilidad"),alpha=0.5 ) +
+        geom_line(data = Comp_mov_fallecidos_Prom_Movil, aes( x = fecha, y=media_movil_fallecidos, color = "Promedio móvil Fallecidos" ),alpha=0.5) +
+        geom_vline( xintercept = as.numeric(as.Date('2020-12-22')),linetype=2,color='black')+
+        geom_vline( xintercept = as.numeric(as.Date('2021-01-26')),linetype=2,color='blue')+
+        geom_vline( xintercept = as.numeric(as.Date('2021-03-11')),linetype=2,color='black')+
+        geom_vline( xintercept = as.numeric(as.Date('2021-04-23')),linetype=2,color='blue')+
+        xlab('') +
+        ylab('') +
+          scale_color_manual(name="Groups",values=c("Promedio móvil Movilidad"="orange",
+                                                    "Promedio móvil Fallecidos"= "darkorchid1"))+
+          guides(colour = guide_legend(override.aes = list(linetype = 1)))+
+        scale_x_date(date_breaks = "30 day", date_labels =  "%b%y") +
+        scale_y_continuous(sec.axis = sec_axis(~., name = "Fallecidos")) +
+        theme_classic()+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9))
+              ) %>%
+  layout(title = list(text = paste0('COVID-19: Promedio Móvil Evolución Movilidad y Fallecimientos en CABA 2020-2021',
+                                    '<br>',
+                                    '<sup>',
+                                    ' Fuente Movilidad CABA: Apple - Fuente Fallecimientos CABA: GCBA ',
+                                    '</sup>')),titlefont=list(size=16))
+
+
+u <- u %>% layout(legend = list(x = 0.1, y = 0.9))
+u 
+
+```
+
+###############################################################################################
+
+### Observaciones Gráfico 1 (valores individuales de tasa de movilidad y fallecidos)
+  
+Teniendo en cuenta que los datos que obtuvimos de la fuente de datos de Apple se limitan a aquellos usuarios del dispositivo, los cuales representan un porcentaje reducido de los ciudadanos de la Ciudad Autónoma de Buenos Aires y que, la calidad de datos de pacientes fallecidos por COVID-19 puede variar dependiendo de las fuentes utilizadas y disponibles al público, no se puede generalizar las observaciones.
+ 
+A partir del gráfico de movilidad y fallecimientos en función del tiempo se ve que la movilidad se condice con la implementación de las medidas del ASPO, ya que se observa una caída muy significativa en dicha tasa  en la fecha de la implementación de las medidas. Seguido a esto, el incremento de la movilidad es paulatino. 
+  
+En Noviembre de 2020, con la implementación de las medidas DISPO, se observa cómo aumenta de movilidad. A su vez, la implementación de las medidas DISPO ocurre después de manifestarse una reducción en la cantidad de fallecidos. 
+  
+En Abril de 2021, fecha en la que se implementaron por DNU nuevas restricciones a la movilidad, se identifica una reducción de la movilidad y los fallecimientos presentan una tendencia similar a la de Julio 2020.
+
+
+### Observaciones Gráfico 2 (promedios móviles de tasa de movilidad y fallecidos)
+
+Observamos que en los últimos meses, la distancia entre los picos de las curvas de promedio móvil de fallecidos y movilidad es de  aproximadamente 35 días. Desde ya que esto no implica directamente relación causal alguna, pero podría ser un indicio para posteriores investigaciones que estudien la relación entre los fallecimientos y otros factores. 
+
+
