@@ -30,11 +30,9 @@ Los nuevos paquetes deberán ser agregados al vector "packages_needed".
 ```{r}
 
 paquetes <- c(
-  "tidyverse",
   "plotly",
+  "tidyverse",
   "lubridate",
-  "htmlwidgets",
-  "data.table"
 )
 
 for (i in packages_needed) {
@@ -142,7 +140,7 @@ Unimos las dos tablas en una sola tomando "fecha" como clave primaria.
 
 ```{r}
 Comp_mov_fallecidos <- 
-  mobility_caba %>% full_join(Cant_Fallecidos_Caba, by = "fecha")
+  mobility_caba %>% inner_join(Cant_Fallecidos_Caba, by = "fecha")
 ```
 
 ### Gráfico 1: Evolución Movilidad y Fallecimientos en CABA 2020-2021
@@ -153,42 +151,50 @@ En orden de izquierda a derecha las lineas punteadas marcan las fechas de inicio
 
 ```{r}
 
-p <-  ggplotly(
 
-    ggplot(show.legend = TRUE) +
+base_plot <-
+  ggplot(show.legend = TRUE) +
   geom_line(data = Comp_mov_fallecidos, aes(x = fecha, y = tasa, color = "Movilidad"), alpha = 0.5) +
   geom_line(data = Comp_mov_fallecidos, aes(x = fecha, y = Cant_Fallecidos_Caba, color = "Fallecidos"), alpha = 0.5) +
-  geom_smooth(data = Comp_mov_fallecidos,
-              aes(x = fecha, y = Cant_Fallecidos_Caba),
-              color = "darkorchid1", method = "lm", formula = y ~ splines::bs(x, 10)) +
-  geom_smooth(data = Comp_mov_fallecidos,
-              aes(x = fecha, y = tasa),
-              color = "coral", method = "lm", formula = y ~ splines::bs(x, 10)) +
+  geom_smooth(
+    data = Comp_mov_fallecidos,
+    aes(x = fecha, y = Cant_Fallecidos_Caba),
+    color = "darkorchid1", method = "lm", formula = y ~ splines::bs(x, 10)
+  ) +
+  geom_smooth(
+    data = Comp_mov_fallecidos,
+    aes(x = fecha, y = tasa),
+    color = "coral", method = "lm", formula = y ~ splines::bs(x, 10)
+  ) +
   geom_vline(xintercept = as.numeric(as.Date("2020-11-07")), linetype = 2, color = "grey") +
   geom_vline(xintercept = as.numeric(as.Date("2020-03-20")), linetype = 2, color = "grey") +
   geom_vline(xintercept = as.numeric(as.Date("2021-04-19")), linetype = 2, color = "grey") +
   xlab("") +
   ylab("") +
-  scale_color_manual(name = "Groups", values = c(
+  scale_color_manual(name = "Variable", values = c(
     "Movilidad" = "orange",
     "Fallecidos" = "darkorchid1"
   )) +
-  guides(colour = guide_legend(override.aes = list(linetype = 1))) +
+  #guides(colour = guide_legend(override.aes = list(linetype = 1))) +
   scale_x_date(date_breaks = "30 day", date_labels = "%b%y") +
-  scale_y_continuous(sec.axis = sec_axis(~., name = "Fallecidos")) +
+  scale_y_continuous(sec.axis = sec_axis(~., name = "Indice de Movilidad")) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9))
-              ) %>%
-  layout(title = list(text = paste0('COVID-19: Evolución Movilidad y Fallecimientos en CABA 2020-2021',
-                                    '<br>',
-                                    '<sup>',
-                                    ' Fuente Movilidad CABA: Apple - Fuente Fallecimientos CABA: GCBA ',
-                                    '</sup>')),titlefont=list(size=16))
 
 
-p <- p %>% layout(legend = list(x = 0.1, y = 0.9))
-p 
 
+
+p <- ggplotly(base_plot) %>%
+  layout(title = list(text = paste0(
+    "COVID-19: Evolución Movilidad y Fallecimientos en CABA 2020-2021",
+    "<br>",
+    "<sup>",
+    " Fuente Movilidad CABA: Apple - Fuente Fallecimientos CABA: GCBA ",
+    "</sup>"
+  )), titlefont = list(size = 16),
+  legend = list(x = 0.1, y = 0.9))
+
+p
 
 
 ```
