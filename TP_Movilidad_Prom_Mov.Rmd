@@ -6,7 +6,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-## COVID-19: Evolución del número de fallecimientos y la movilidad en Ciudad Autónoma de Buenos Aires  Marzo 2020/ Abril 2021
+# COVID-19: Evolución del número de fallecimientos y la movilidad en Ciudad Autónoma de Buenos Aires  Marzo 2020/ Abril 2021
 
 El primer caso de COVID-19 en Argentina se detectó el 3 de marzo de 2020 y el 7 de marzo, el Ministerio de Salud confirmó la primera muerte causada por dicho virus. Pocos dias después, el 10 de marzo, la Organización Mundial de la Salud (OMS) declara COVID-19 como pandemia. 
 
@@ -22,38 +22,30 @@ Utilizamos RStudio para realizar un análisis exploratorio de datos y las manipu
 knitr::opts_chunk$set(echo = TRUE,warning=F,message=F)
 ```
 
-### Importar Paquetes.
-Para comenzar, verificamos que estén instalados los paquetes necesarios.
+## Importar Paquetes.
+Para comenzar, verificamos que estén instalados (e instalamos si no) los paquetes necesarios.
 
 Los nuevos paquetes deberán ser agregados al vector "packages_needed".
 
 ```{r}
-check_packages <- function(packages) {
-  if (all(packages %in% rownames(installed.packages()))) {
-    TRUE
-  } else{
-    cat(
-      "Instalar los siguientes packages antes de ejecutar el presente script\n",
-      packages[!(packages %in% rownames(installed.packages()))],
-      "\n"
-    )
+
+paquetes <- c(
+  "tidyverse",
+  "plotly",
+  "lubridate",
+  "htmlwidgets",
+  "data.table"
+)
+
+for (i in packages_needed) {
+  if (!(i %in% installed.packages())) {
+    install.packages(i, dependencies = TRUE, character.only = TRUE)
   }
+  library(i)
 }
-packages_needed <- c("tidyverse", "ggrepel", "plotly",
-                     "lubridate", "htmlwidgets" , "RColorBrewer",
-                     "sqldf", "grid", "data.table", "easypackages")
-check_packages(packages_needed)
+
 ```
 
-### Activar Paquetes.
-Primero instalamos la librería "easypackes" para instalar todo el resto.
-Cargamos las  librerías de los paquetes ya instalados llamandolas mediante la función library().
-
-
-```{r }
-library(easypackages)
-libraries(packages_needed)
-```
 
 Importamos la URL de Movilidad de Apple donde posteriormente se filtrará la tasa de movilidad de CABA de los caminantes.
 
@@ -61,7 +53,6 @@ Como la URL de Apple se modifica dia a dia, usamos un mirror para descargar los 
 
 ```{r}
 mobility_url <- "https://github.com/ActiveConclusion/COVID19_mobility/raw/master/apple_reports/applemobilitytrends.csv"
-
 mobility <- read_csv(mobility_url)
 ```
 
@@ -136,7 +127,7 @@ Cant_Fallecidos_Caba <- select(Cant_Fallecidos_Caba,"fecha_fallecimiento")
 Convertimos en formato fecha la columna "fecha_fallecimiento".
 
 ```{r}
-Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba%>% mutate(fecha_fallecimiento = as.Date(parse_date_time(fecha_fallecimiento,"d b Y H M S")))
+Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba %>% mutate(fecha_fallecimiento = as.Date(parse_date_time(fecha_fallecimiento, "d b Y H M S")))
 ```
 
 Agrupamos y contamos cantidad de fallecidos por fecha, ordenando y renombrando columnas.
