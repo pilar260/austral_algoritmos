@@ -46,6 +46,9 @@ for (i in packages_needed) {
 
 ```
 
+## carga y manipulacion de datos
+
+### movilidad
 
 Importamos la URL de Movilidad de Apple donde posteriormente se filtrará la tasa de movilidad de CABA de los caminantes.
 
@@ -56,57 +59,47 @@ mobility_url <- "https://github.com/ActiveConclusion/COVID19_mobility/raw/master
 mobility <- read_csv(mobility_url)
 ```
 
-### Manipulación de Datos
 
-Convertimos las columnas region y transportation_type al formato factor.
-
-```{r}
-mobility$region                <- as.factor(mobility$region)
-mobility$transportation_type   <- as.factor(mobility$transportation_type)
-```
+#### Manipulación de Datos de movilidad
 
 Creamos un nuevo set de datos en el cual pasamos el set inicial del formato ancho al formato largo ( todas las columnas de fecha ) y finalmente, se crean las columnas nuevas "fecha" y "tasa" donde se almacenan los datos originales de las columnas de fecha. 
 
-```{r}
-datos_v   <- mobility %>% gather(fecha, tasa    , 7:ncol(mobility))
-```
-
-Modificamos el formato de la fecha.
+Ademas, filtramos los datos, quedandonos unicamente con los correspondientes a argentina, en donde solo hay datos de CABA.
 
 ```{r}
-  datos_v$fecha <- as.Date(datos_v$fecha, format = "X%Y.%m.%d")
+mobility %>%
+  filter(country == "Argentina") %>%
+  # eliminamos columnas inutiles
+  select(-c(geo_type, region, alternative_name, `sub-region`, country)) %>%
+  # pivoteamos la tabla, convirtiendo cada celda de los indices de movilidad,
+  # en una fila.
+  pivot_longer(
+    cols = -transportation_type,
+    names_to = "fecha",
+    values_to = "tasa"
+  ) %>%
+  # arreglamos el formato de las fechas
+  mutate(fecha = parse_date(fecha)) -> mobility_caba
 ```
 
-Filtramos por "Buenos Aires" y tipo de movilidad "caminando".
-
-En caso de querer adaptar el código para otro tipo de movilidad o región, se deberia filtrar aquí.
-
-```{r}
-pais = "Buenos Aires"
-trans = "walking"
-datos <- subset(datos_v, region == pais & transportation_type == trans)
-
-```
-
-Seleccionamos sólo aquellas columnas que nos interesan.
-
-```{r}
-
-datos <-  select( datos, fecha, tasa)
-```
 
 ### Datos de Fallecimientos
 
-Una vez terminado el data wrangling para la Movilidad, cargamos nuestros datos de fallecidos.
+Una vez terminado el *data wrangling* para la Movilidad, cargamos nuestros datos de fallecidos.
 Ahora se importa y se trabaja sólo con aquellos de fallecidos por COVID-19 en Buenos Aires.
-
-Importamos el excel extraido de :
-### Unión de los datos de fallecimientos y de movilidad
 
 Es importante verificar que la ruta sea correcta al correr el script.
 
 ```{r}
-casos_covid19_CDN <- read_csv("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/salud/casos-covid-19/casos_covid19.csv")
+
+# chequeamos si la data esta descargada (en el CWD) previamente, porque tarda un rato si no.
+if (file.exists("./casos_covid19.csv")) {
+  casos_covid19_CDN <- read_csv("./casos_covid19.csv")
+} else {
+  casos_url <- "https://cdn.buenosaires.gob.ar/datosabiertos/datasets/salud/casos-covid-19/casos_covid19.csv"
+  casos_covid19_CDN <- read_csv(casos_url)
+}
+
 ```
 
 Filtramos solo aquellos casos casos de CABA que hayan fallecido.
@@ -115,7 +108,7 @@ Filtramos solo aquellos casos casos de CABA que hayan fallecido.
 Cant_Fallecidos_Caba <- casos_covid19_CDN %>% filter(provincia=="CABA" & fallecido=="si")
 ```
 
-Seleccionamos  sólo la columna de "fecha de fallecimiento".
+Seleccionamos sólo la columna de "fecha de fallecimiento".
 
 ```{r}
 Cant_Fallecidos_Caba <- select(Cant_Fallecidos_Caba,"fecha_fallecimiento")
