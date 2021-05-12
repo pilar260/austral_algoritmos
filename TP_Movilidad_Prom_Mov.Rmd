@@ -18,8 +18,9 @@ Métodos:
   
 Utilizamos RStudio para realizar un análisis exploratorio de datos y las manipulaciones que consideramos necesarias para obtener una visualización de los mismos.
 
-```{r }
-knitr::opts_chunk$set(echo = TRUE,warning=F,message=F)
+```{r}
+# evitamos aparicion de warnings y mensajes en el HTML
+knitr::opts_chunk$set(echo = TRUE, warning=F, message=F)
 ```
 
 ## Importar Paquetes.
@@ -33,13 +34,15 @@ paquetes <- c(
   "plotly",
   "tidyverse",
   "lubridate",
+  "zoo"
 )
 
-for (i in packages_needed) {
-  if (!(i %in% installed.packages())) {
-    install.packages(i, dependencies = TRUE, character.only = TRUE)
+for (i in paquetes) {
+  if (!(i %in% rownames(installed.packages()))) {
+    install.packages(i, dependencies = TRUE)
+  } else {
+  library(i, character.only = TRUE)
   }
-  library(i)
 }
 
 ```
@@ -63,16 +66,16 @@ Ademas, filtramos los datos, quedandonos unicamente con los correspondientes a a
 
 ```{r}
 mobility %>%
-  filter(country == "Argentina") %>%
+  filter(country == "Argentina", transportation_type == "walking") %>%
   # eliminamos columnas inutiles
-  select(-c(geo_type, region, alternative_name, `sub-region`, country)) %>%
+  select(-c(geo_type, region, alternative_name, `sub-region`, country, transportation_type)) %>% 
   # pivoteamos la tabla, convirtiendo cada celda de los indices de movilidad,
   # en una fila.
   pivot_longer(
-    cols = -transportation_type,
+    cols = everything(),
     names_to = "fecha",
     values_to = "tasa"
-  ) %>%
+  ) %>% 
   # arreglamos el formato de las fechas
   mutate(fecha = parse_date(fecha)) -> mobility_caba
 ```
@@ -97,7 +100,7 @@ if (file.exists("./casos_covid19.csv")) {
 
 ```
 
-Filtramos solo aquellos casos casos de CABA que hayan fallecido.
+Filtramos solo aquellos casos de CABA que hayan fallecido.
 
 ```{r}
 Cant_Fallecidos_Caba <- casos_covid19_CDN %>% filter(provincia == "CABA" & fallecido == "si")
@@ -120,7 +123,7 @@ Agrupamos y contamos cantidad de fallecidos por fecha, ordenando y renombrando c
 
 ```{r}
 Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba %>%
-  count(fecha_fallecimiento, sort = TRUE) %>%
+  count(fecha_fallecimiento, sort = TRUE) %>% 
   arrange(fecha_fallecimiento) %>%
   rename(fecha = fecha_fallecimiento, Cant_Fallecidos_Caba = n)
 
@@ -136,7 +139,7 @@ Cant_Fallecidos_Caba <- Cant_Fallecidos_Caba %>%
 
 ### Unión de los datos de fallecimientos y de movilidad
 
-Unimos las dos tablas en una sola tomando "fecha" como clave primaria. 
+Unimos las dos tablas en una sola tomando "fecha" como clave primaria.
 
 ```{r}
 Comp_mov_fallecidos <- 
@@ -151,11 +154,12 @@ En orden de izquierda a derecha las lineas punteadas marcan las fechas de inicio
 
 ```{r}
 
-
 base_plot <-
   ggplot(show.legend = TRUE) +
-  geom_line(data = Comp_mov_fallecidos, aes(x = fecha, y = tasa, color = "Movilidad"), alpha = 0.5) +
-  geom_line(data = Comp_mov_fallecidos, aes(x = fecha, y = Cant_Fallecidos_Caba, color = "Fallecidos"), alpha = 0.5) +
+  geom_line(data = Comp_mov_fallecidos,
+            aes(x = fecha, y = tasa, color = "Movilidad"), alpha = 0.5) +
+  geom_line(data = Comp_mov_fallecidos,
+            aes(x = fecha, y = Cant_Fallecidos_Caba, color = "Fallecidos"), alpha = 0.5) +
   geom_smooth(
     data = Comp_mov_fallecidos,
     aes(x = fecha, y = Cant_Fallecidos_Caba),
@@ -166,7 +170,10 @@ base_plot <-
     aes(x = fecha, y = tasa),
     color = "coral", method = "lm", formula = y ~ splines::bs(x, 10)
   ) +
-  geom_vline(xintercept = as.numeric(as.Date("2020-11-07")), linetype = 2, color = "grey") +
+  geom_vline(xintercept = as.numeric(as.Date("2020-11-07")),
+             linetype = 2,
+             color = "grey") +
+  
   geom_vline(xintercept = as.numeric(as.Date("2020-03-20")), linetype = 2, color = "grey") +
   geom_vline(xintercept = as.numeric(as.Date("2021-04-19")), linetype = 2, color = "grey") +
   xlab("") +
@@ -175,7 +182,7 @@ base_plot <-
     "Movilidad" = "orange",
     "Fallecidos" = "darkorchid1"
   )) +
-  #guides(colour = guide_legend(override.aes = list(linetype = 1))) +
+  guides(colour = guide_legend(override.aes = list(linetype = 1))) +
   scale_x_date(date_breaks = "30 day", date_labels = "%b%y") +
   scale_y_continuous(sec.axis = sec_axis(~., name = "Indice de Movilidad")) +
   theme_classic() +
@@ -203,7 +210,7 @@ p
 
 Observando el gráfico de tasa de movilidad y cantidad de fallecidos, nos proponemos verificar la distancia entre los picos de ambas curvas. Para ello, realizamos otro gráfico basado en los promedios móviles de las dos variables que nos permita visualizarlos mejor.
 
-En primer lugar, creamos un nuevo DataFrame.Identificamos 3 registros de tipo NA en la variable "tasa".
+En primer lugar, creamos un nuevo DataFrame. Identificamos 3 registros de tipo NA en la variable "tasa".
 
 Para solucionarlo, para cada valor faltante imputamos esos NAs por los últimos valores consistentes. Creemos que esto es metodológicamente mejor que eliminar registros de fallecidos.
 Para lograr lo anterior, creamos un vector a partir de una función que toma el último valor consistente y lo utiliza para reemplazar los NA que encuentre y lo agregamos como una nueva columna llamada "tasa_corregida".
@@ -236,34 +243,37 @@ Marcamos, a su vez, los máximos relativos de movilidad(línea punteada negra) y
 ```{r}
 
 
-u <-  ggplotly(
-
-    ggplot( show.legend = TRUE) +
-        geom_line(data = Comp_mov_fallecidos_Prom_Movil,  aes(x = fecha, y=media_movil_tasa, color = "Promedio móvil Movilidad"),alpha=0.5 ) +
-        geom_line(data = Comp_mov_fallecidos_Prom_Movil, aes( x = fecha, y=media_movil_fallecidos, color = "Promedio móvil Fallecidos" ),alpha=0.5) +
-        geom_vline( xintercept = as.numeric(as.Date('2020-12-22')),linetype=2,color='black')+
-        geom_vline( xintercept = as.numeric(as.Date('2021-01-26')),linetype=2,color='blue')+
-        geom_vline( xintercept = as.numeric(as.Date('2021-03-11')),linetype=2,color='black')+
-        geom_vline( xintercept = as.numeric(as.Date('2021-04-23')),linetype=2,color='blue')+
-        xlab('') +
-        ylab('') +
-          scale_color_manual(name="Groups",values=c("Promedio móvil Movilidad"="orange",
-                                                    "Promedio móvil Fallecidos"= "darkorchid1"))+
-          guides(colour = guide_legend(override.aes = list(linetype = 1)))+
-        scale_x_date(date_breaks = "30 day", date_labels =  "%b%y") +
-        scale_y_continuous(sec.axis = sec_axis(~., name = "Fallecidos")) +
-        theme_classic()+
-        theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9))
-              ) %>%
-  layout(title = list(text = paste0('COVID-19: Promedio Móvil Evolución Movilidad y Fallecimientos en CABA 2020-2021',
-                                    '<br>',
-                                    '<sup>',
-                                    ' Fuente Movilidad CABA: Apple - Fuente Fallecimientos CABA: GCBA ',
-                                    '</sup>')),titlefont=list(size=16))
+u <- ggplotly(
+  ggplot(show.legend = TRUE) +
+    geom_line(data = Comp_mov_fallecidos_Prom_Movil, aes(x = fecha, y = media_movil_tasa, color = "Promedio móvil Movilidad"), alpha = 0.5) +
+    geom_line(data = Comp_mov_fallecidos_Prom_Movil, aes(x = fecha, y = media_movil_fallecidos, color = "Promedio móvil Fallecidos"), alpha = 0.5) +
+    geom_vline(xintercept = as.numeric(as.Date("2020-12-22")), linetype = 2, color = "black") +
+    geom_vline(xintercept = as.numeric(as.Date("2021-01-26")), linetype = 2, color = "blue") +
+    geom_vline(xintercept = as.numeric(as.Date("2021-03-11")), linetype = 2, color = "black") +
+    geom_vline(xintercept = as.numeric(as.Date("2021-04-23")), linetype = 2, color = "blue") +
+    xlab("") +
+    ylab("") +
+    scale_color_manual(name = "Groups", values = c(
+      "Promedio móvil Movilidad" = "orange",
+      "Promedio móvil Fallecidos" = "darkorchid1"
+    )) +
+    guides(colour = guide_legend(override.aes = list(linetype = 1))) +
+    scale_x_date(date_breaks = "30 day", date_labels = "%b%y") +
+    scale_y_continuous(sec.axis = sec_axis(~., name = "Fallecidos")) +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9))
+) %>%
+  layout(title = list(text = paste0(
+    "COVID-19: Promedio Móvil Evolución Movilidad y Fallecimientos en CABA 2020-2021",
+    "<br>",
+    "<sup>",
+    " Fuente Movilidad CABA: Apple - Fuente Fallecimientos CABA: GCBA ",
+    "</sup>"
+  )), titlefont = list(size = 16))
 
 
 u <- u %>% layout(legend = list(x = 0.1, y = 0.9))
-u 
+u
 
 ```
 
