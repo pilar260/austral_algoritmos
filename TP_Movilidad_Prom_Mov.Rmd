@@ -8,18 +8,25 @@ editor_options:
 
 # COVID-19: Evolución del número de fallecimientos y la movilidad en Ciudad Autónoma de Buenos Aires  Marzo 2020/ Abril 2021
 
-El primer caso de COVID-19 en Argentina se detectó el 3 de marzo de 2020 y el 7 de marzo, el Ministerio de Salud confirmó la primera muerte causada por dicho virus. Pocos dias después, el 10 de marzo, la Organización Mundial de la Salud (OMS) declara COVID-19 como pandemia. 
+El primer caso de COVID-19 en Argentina se detectó el día 3 de marzo de 2020; el 7 de marzo el Ministerio de Salud de la Nación (MSN) confirmó la primera muerte en el país causada por dicho virus. Pocos dias después, el 10 de marzo, la Organización Mundial de la Salud (OMS) declaró la enfermedad COVID-19 como pandemia. 
 
-A raíz de esto, se establecieron medidas de restricción de la movilidad (ASPO) para control de la diseminación del virus. 
+A raíz de esto, en el mundo se establecieron medidas de aislamiento social y restricción de la movilidad para control de la diseminación del virus.En nuestro país , el 19 de marzo el MSN decretó el Aislamiento Social Preventivo Obligatorio (ASPO)  mediante el decreto 299/2020.
 
-El objetivo de este análisis es evaluar gráficamente las tendencias de la movilidad de las personas en la Ciudad Autónoma de Buenos Aires, como consecuencia de las políticas que se han establecido, en simultáneo con el número de muertes por COVID-19.
+El objetivo de este análisis es evaluar en forma gráfica las tendencias de la movilidad de las personas en la Ciudad Autónoma de Buenos Aires (CABA) , como consecuencia de las políticas que se han establecido, en simultáneo con el número de muertes por COVID-19.
 
 Métodos:
-  
-Utilizamos RStudio para realizar un análisis exploratorio de datos y las manipulaciones que consideramos necesarias para obtener una visualización de los mismos.
+A los fines de disponer de la información necesaria el análisis realizamos una búsqueda y evaluación de las distintas bases de datos públicas disponibles. Por concenso en el grupo se decidió utilizar las siguientes: 
+Datos de movilidad : se extrajeron de las base de Apple , considerando la movilidad de los caminantes "walking" ( podemos poner el enlace?) 
+Datos de mortalidad en CABA : se extrajeron de la base de datos del Ministerio de Salud de la Nación. Se consideró la fecha de fallecimiento y no de reporte de muerte ( podemos poner el enlace)
+Utilizamos RStudio para realizar un análisis exploratorio de datos, limpieza de la base y las manipulaciones necesarias para obtener una visualización gráfica de los mismos.
+Se presentan 2 gráficos
+1- Evolución de tasas de movilidad y fallecidos en el tiempo
+2- Evolución de promedio movil de la tasa de movilidad y fallecidos en el tiempo
+
+A continuación presentamos el código utilizado y sus comentarios
 
 ```{r}
-# evitamos aparicion de warnings y mensajes en el HTML
+# Evitamos aparicion de warnings y mensajes en el HTML
 knitr::opts_chunk$set(echo = TRUE, warning=F, message=F)
 ```
 
